@@ -1,0 +1,130 @@
+---
+title: "PROJECT1"
+author: "Gaurang"
+date: "2024-03-15"
+output: pdf_document
+---
+#Project 1-Dat301
+```{r}
+# Load the required libraries
+library(readr)
+library(dplyr)
+library(ggplot2)
+
+df <- read.csv("top_50_2023.csv", sep=",", header=TRUE)
+
+head (df)
+
+# Check the data types of variables
+str(df)
+
+head(df)
+# Get a summary of numerical variables
+summary(df)
+# Check for missing values
+sum(is.na(df))
+
+# If missing values exist, decide how to handle them (remove rows, impute, etc.)
+```
+```{r}
+# Check the data types of variables
+str(df)
+
+# Summarize numerical variables
+summary(df[, sapply(df, is.numeric)])
+# Density plots for numerical variables
+
+ggplot(df, aes(x = danceability)) + geom_density() + labs(title = "Distribution of Danceability")
+
+# Repeat for other numerical variables like valence, energy, loudness, etc.
+
+# Scatter plots to explore relationships
+ggplot(df, aes(x = energy, y = valence)) + geom_point() + labs(title = "Energy vs. Valence")
+# Repeat for other combinations of numerical variables
+
+```
+
+
+
+
+
+
+
+#Exploring The genres
+```{r}
+# Explore the distribution of genres
+genre_counts <- table(unlist(strsplit(df$genres, "', '")))
+barplot(genre_counts, main = "Genre Distribution", xlab = "Genres", las=2)  # las=2 for horizontal label orientation
+
+# Explore the distribution of artists
+artist_counts <- table(df$artist_name)
+barplot(head(sort(artist_counts, decreasing = TRUE), 20), main = "Top 20 Artists", xlab = "Artist", las=2)
+# Histogram of track popularity
+ggplot(df, aes(x = popularity)) + 
+  geom_histogram(bins = 20, fill = "steelblue", color = "black") +
+  labs(title = "Distribution of Track Popularity", x = "Popularity", y = "Count")
+
+# Scatter plot of energy vs. danceability
+ggplot(df, aes(x = energy, y = danceability)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Energy vs. Danceability", x = "Energy", y = "Danceability")
+```
+```{r}
+# Load required libraries
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Read the dataset
+df <- read.csv("top_50_2023.csv", sep=",", header=TRUE)
+
+# Check the structure of the dataset
+str(df)
+
+# Summary statistics
+summary(df)
+
+
+# Check for missing values
+sum(is.na(df))
+
+# 1. Genre Popularity
+# Split genres column into separate rows
+genres_df <- df %>%
+  separate_rows(genres, sep = ",") %>%
+  mutate(genres = trimws(genres))  # Remove leading and trailing whitespaces
+
+# Plot genre frequency
+genre_freq <- genres_df %>%
+  count(genres) %>%
+  arrange(desc(n)) %>%
+  top_n(10)
+
+ggplot(genre_freq, aes(x = reorder(genres, n), y = n)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(x = "Genre", y = "Frequency", title = "Top 10 Genres in 2023")
+
+# 2. Mood and Music
+# Correlation between valence, energy, and danceability
+correlation <- df %>%
+  select(valence, energy, danceability) %>%
+  cor()
+
+correlation
+
+# 3. Trends Analysis
+# Track duration trend
+ggplot(df, aes(x = as.Date(album_release_date), y = duration_ms)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Release Date", y = "Track Duration (ms)", title = "Track Duration Trend Over 2023")
+
+# Popularity trend
+ggplot(df, aes(x = as.Date(album_release_date), y = popularity)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "Release Date", y = "Popularity", title = "Popularity Trend Over 2023")
+
+```
+
