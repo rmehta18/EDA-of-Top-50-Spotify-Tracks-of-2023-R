@@ -2,129 +2,258 @@
 title: "PROJECT1"
 author: "Gaurang"
 date: "2024-03-15"
-output: pdf_document
+output:
+  pdf_document: default
+  word_document: default
 ---
-#Project 1-Dat301
-```{r}
-# Load the required libraries
-library(readr)
-library(dplyr)
+##load libraries
+```{r,echo=FALSE}
+library(tidyverse)
 library(ggplot2)
-
-df <- read.csv("top_50_2023.csv", sep=",", header=TRUE)
-
-head (df)
-
-# Check the data types of variables
-str(df)
-
-head(df)
-# Get a summary of numerical variables
-summary(df)
-# Check for missing values
-sum(is.na(df))
-
-# If missing values exist, decide how to handle them (remove rows, impute, etc.)
-```
-```{r}
-# Check the data types of variables
-str(df)
-
-# Summarize numerical variables
-summary(df[, sapply(df, is.numeric)])
-# Density plots for numerical variables
-
-ggplot(df, aes(x = danceability)) + geom_density() + labs(title = "Distribution of Danceability")
-
-# Repeat for other numerical variables like valence, energy, loudness, etc.
-
-# Scatter plots to explore relationships
-ggplot(df, aes(x = energy, y = valence)) + geom_point() + labs(title = "Energy vs. Valence")
-# Repeat for other combinations of numerical variables
-
-```
-
-
-
-
-
-
-
-#Exploring The genres
-```{r}
-# Explore the distribution of genres
-genre_counts <- table(unlist(strsplit(df$genres, "', '")))
-barplot(genre_counts, main = "Genre Distribution", xlab = "Genres", las=2)  # las=2 for horizontal label orientation
-
-# Explore the distribution of artists
-artist_counts <- table(df$artist_name)
-barplot(head(sort(artist_counts, decreasing = TRUE), 20), main = "Top 20 Artists", xlab = "Artist", las=2)
-# Histogram of track popularity
-ggplot(df, aes(x = popularity)) + 
-  geom_histogram(bins = 20, fill = "steelblue", color = "black") +
-  labs(title = "Distribution of Track Popularity", x = "Popularity", y = "Count")
-
-# Scatter plot of energy vs. danceability
-ggplot(df, aes(x = energy, y = danceability)) +
-  geom_point(alpha = 0.5) +
-  labs(title = "Energy vs. Danceability", x = "Energy", y = "Danceability")
-```
-```{r}
-# Load required libraries
-library(readr)
+library(dplyr)
 library(dplyr)
 library(tidyr)
-library(ggplot2)
+library(caret)
+library(stringr)
+library(randomForest)
+library(e1071)
+library(gbm)
 
-# Read the dataset
-df <- read.csv("top_50_2023.csv", sep=",", header=TRUE)
+```
+
+##read dataset
+```{r,echo=FALSE,}
+df<- read.csv("top_50_2023.csv", sep=",", header=TRUE)
+##head(df)
+##view(df)
+##glimpse(df)
+# Check the column names in your dataset
+##colnames(df)
+
+```
+
+##cleaning 
+```{r,echo=FALSE,eval=FALSE}
+
+###xxxxxxxxx
+#select Variables 
+
+df %>%
+  select(artist_name,track_name,popularity) 
+##xxxxxxxxxxxx
+##filter observations 
+
+df %>%
+  select(artist_name,track_name,popularity) 
+na.omit()
+#conclusion no missing data 
+class(df$genres)
+levels(df$genres)
+df$genres<-as.factor(df$genres)
+class(df$genres)
+levels(df$genres)
+
+###duck with the data 
+
+class(df$genres)
+levels(df$genres)
+df <- separate_rows(df, genres, sep = ", ")
+
+
+genre <- "rap"  # Specify the genre for which you want to list track names
+rap_songs <- df[df$genres == "", "track_name"]
+print(rap_songs)
+df %>%
+  select(artist_name,genres) 
+
+# Split genres and create a separate row for each genre while preserving song and artist information
+df <- df %>%
+  mutate(genres = str_split(genres, ", ")) %>%
+  unnest(genres)
+df %>%
+  select(artist_name,genres) 
+##################
+
+
+```
+
+
+
+### work 
+```{r,echo=FALSE,eval=FALSE}
+class(df$is_explicit)
+unique(df$is_explicit)
+df$is_explicit<- as.factor(df$is_explicit)
+class(df$is_explicit)
+levels(df$is_explicit)
+df$is_explicit <- factor((df$is_explicit),levels = c("True","False"))
+levels(df$is_explicit)
+df$genres <- gsub("\\[|'|\\]", "", df$genres)
+
+df %>%
+  select(artist_name,track_name,popularity,genres) 
+# Arrange the dataframe in descending order based on the 'popularity' column
+df <- arrange(df, desc(popularity))
+
+# View the arranged dataframe
+print(df)
+```
+
+
+#intro 
+##1.What are the most common genres among the top tracks?
+```{r,echo=FALSE}
+# Analyzing common genres among top tracks
+
+# Assuming your dataset is named 'spotify_top_tracks_2023'
 
 # Check the structure of the dataset
-str(df)
+##str(df)
+df$genres <- gsub("\\[|'|\\]", "", df$genres)
 
-# Summary statistics
-summary(df)
+# Count the occurrences of each genre
+genre_counts <- table(unlist(df$genres))
 
+# Sort the genres by frequency
+sorted_genres <- sort(genre_counts, decreasing = TRUE)
 
-# Check for missing values
-sum(is.na(df))
+# Display the top N most common genres
+N <- 5  # You can adjust this value as needed
+top_genres <- head(sorted_genres, N)
 
-# 1. Genre Popularity
-# Split genres column into separate rows
-genres_df <- df %>%
-  separate_rows(genres, sep = ",") %>%
-  mutate(genres = trimws(genres))  # Remove leading and trailing whitespaces
+# Create a data frame for plotting
+genre_data <- data.frame(genre = names(top_genres), frequency = as.numeric(top_genres))
 
-# Plot genre frequency
-genre_freq <- genres_df %>%
-  count(genres) %>%
-  arrange(desc(n)) %>%
-  top_n(10)
-
-ggplot(genre_freq, aes(x = reorder(genres, n), y = n)) +
+# Plot using ggplot2
+ggplot(genre_data, aes(x = reorder(genre, -frequency), y = frequency)) +
   geom_bar(stat = "identity", fill = "skyblue") +
-  labs(x = "Genre", y = "Frequency", title = "Top 10 Genres in 2023")
+  labs(title = "Top 5 Most Common Genres Among Top Tracks",
+       x = "Genre", y = "Frequency") +
+  theme(axis.text.x = element_text(angle = 0, hjust = 1))  # Rotate x-axis labels
+# Count the occurrences of each genre
+genre_counts <- df %>% 
+  count(genres) %>%
+  arrange(desc(n))  # Arrange in descending order of frequency
 
-# 2. Mood and Music
-# Correlation between valence, energy, and danceability
-correlation <- df %>%
-  select(valence, energy, danceability) %>%
-  cor()
+# Display the top 10 most common genres
+top_genres <- head(genre_counts, 10)
+print(top_genres)
 
-correlation
+```
+## 2nd 
+##Next, let's examine the correlation between track attributes and popularity.
+```{r,echo=FALSE}
+# Select relevant columns for correlation analysis
+selected_cols <- c("danceability", "valence", "energy", "loudness", 
+                   "acousticness", "instrumentalness", "liveness", 
+                   "speechiness", "tempo", "duration_ms", "time_signature", 
+                   "popularity")
 
-# 3. Trends Analysis
-# Track duration trend
-ggplot(df, aes(x = as.Date(album_release_date), y = duration_ms)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
-  labs(x = "Release Date", y = "Track Duration (ms)", title = "Track Duration Trend Over 2023")
+# Subset the dataset with selected columns
+df_subset <- df %>% 
+  select(all_of(selected_cols))
 
-# Popularity trend
-ggplot(df, aes(x = as.Date(album_release_date), y = popularity)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE) +
-  labs(x = "Release Date", y = "Popularity", title = "Popularity Trend Over 2023")
+# Compute correlation matrix
+correlation_matrix <- cor(df_subset)
+# Print correlation matrix
+print(correlation_matrix)
+# Convert correlation matrix to data frame
+correlation_df <- as.data.frame(correlation_matrix)
+
+# Add row names as a column
+correlation_df$variable <- rownames(correlation_df)
+
+# Convert correlation matrix to long format
+correlation_long <- tidyr::pivot_longer(correlation_df, -variable, names_to = "variable2", values_to = "correlation")
+
+# Plot correlation heatmap
+ggplot(correlation_long, aes(variable, variable2, fill = correlation)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = 0, limits = c(-1,1), name = "Correlation") +
+  theme_minimal() +
+  labs(title = "Correlation Heatmap of Track Attributes and Popularity",
+       x = "Track Attributes", y = "Track Attributes") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+#3 
+##Predicting Track Popularity
+Lastly, we'll attempt to predict track popularity based on its features.
+
+```{r,echo=FALSE}
+# Load required libraries
+library(caret)  # For training models
+library(randomForest)  # For Random Forest model (you can use other models as well)
+library(e1071)  # For SVM model (Support Vector Machine)
+library(gbm)  # For Gradient Boosting Machine model
+
+# Define predictors and response variable
+predictors <- c("danceability", "valence", "energy", "loudness", 
+                "acousticness", "instrumentalness", "liveness", 
+                "speechiness", "tempo", "duration_ms", "time_signature")
+response_var <- "popularity"
+
+# Check if "popularity" is continuous or categorical
+if (is.numeric(df[[response_var]]) && length(unique(df[[response_var]])) > 5) {
+  # Continuous variable (Regression)
+  
+  # Convert "popularity" to numeric
+  df[[response_var]] <- as.numeric(df[[response_var]])
+  
+  # Create data partition indices
+  set.seed(123)  # For reproducibility
+  train_index <- createDataPartition(df[[response_var]], p = 0.8, list = FALSE)
+  
+  # Subset the dataset into training and testing sets
+  train_data <- df[train_index, ]
+  test_data <- df[-train_index, ]
+  
+  # Train Random Forest model for regression
+  rf_model <- randomForest(train_data[, predictors], train_data[[response_var]], 
+                           ntree = 100, importance = TRUE)
+  
+  # Make predictions on test data
+  rf_predictions <- predict(rf_model, test_data[, predictors])
+  
+  # Evaluate model performance (e.g., RMSE)
+  rmse <- sqrt(mean((test_data[[response_var]] - rf_predictions)^2))
+  print(paste("Random Forest RMSE:", rmse))
+  
+  # Show feature importance
+  print("Feature Importance:")
+  print(importance(rf_model))
+  
+} else {
+  # Categorical variable (Classification)
+  
+  # Convert "popularity" to factor
+  df[[response_var]] <- as.factor(df[[response_var]])
+  
+  # Create data partition indices
+  set.seed(123)  # For reproducibility
+  train_index <- createDataPartition(df[[response_var]], p = 0.8, list = FALSE)
+  
+  # Subset the dataset into training and testing sets
+  train_data <- df[train_index, ]
+  test_data <- df[-train_index, ]
+  
+  # Train Random Forest model for classification
+  rf_model <- randomForest(train_data[, predictors], train_data[[response_var]], 
+                           ntree = 100, importance = TRUE)
+  
+  # Make predictions on test data
+  rf_predictions <- predict(rf_model, test_data[, predictors])
+  
+  # Evaluate model performance (e.g., accuracy)
+  accuracy <- mean(rf_predictions == test_data[[response_var]])
+  print(paste("Random Forest Accuracy:", accuracy))
+  
+  # Show feature importance
+  print("Feature Importance:")
+  print(importance(rf_model))
+}
+
 
 ```
 
