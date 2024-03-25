@@ -42,7 +42,7 @@ df<- read.csv("301Pspotify.csv", sep=",", header=TRUE)
 
 ```
 
-## Cleaning up our data (G)
+## Cleaning up our data
 We cleaned our data further by organizing our genre column in the dataset with the code below. We also were able to arrange our popularity column in descending order and select columns for analysis such as popularity, genres, track names, and artist names.
 
 class(df$is_explicit)
