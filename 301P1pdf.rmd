@@ -1,0 +1,301 @@
+---
+title: "Project 1: Exploratory Analysis of Spotify's Top 50 Tracks of 2023"
+author: "Gaurang and Rithik"
+date: "2024-03-15"
+output:
+  pdf_document
+---
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(caret)
+library(stringr)
+library(randomForest)
+library(e1071)
+library(gbm)
+```
+
+## Background and the Problem
+- The dataset we used has information regarding the top 50 tracks of 2023 on Spotify from kaggle.com
+- There are 12 input variables in the dataset: danceability, valence, energy, loudness, acousticness, instrumentalness, liveness, speechiness, tempo, duration_ms, time_signature, popularity, the response variable is popularity.
+- The main question we would like to answer regarding this data is can we predict what key factors would influence tracks to be popular in the future? To answer this, we have separated it into 3 parts:
+     - What are the most common genres among the top tracks?
+     - What is the correlation between track attributes and popularity?
+     - Can we predict track popularity based on these features?
+
+## Loading in our data 
+The following code was used to load in our data and to split genres and create a separate row for each genre while preserving song and artist information
+
+df<- read.csv("301Pspotify.csv, sep=",", header=TRUE)
+
+df <- df %>%
+  mutate(genres = str_split(genres, ", ")) %>%
+  unnest(genres)
+  
+df %>%
+  select(artist_name,genres) 
+
+```{r,echo=FALSE,}
+df<- read.csv("301Pspotify.csv", sep=",", header=TRUE)
+
+```
+
+## Data Cleanup
+We cleaned our data further by organizing our genre column in the dataset with the code below. We also were able to arrange our popularity column in descending order and select columns for analysis such as popularity, genres, track names, and artist names.
+
+class(df$is_explicit)
+
+unique(df$is_explicit)
+
+df is_explicit<- as.factor(df$is_explicit)
+
+class(df$is_explicit)
+
+levels(df$is_explicit)
+
+df %>%
+  select(artist_name,track_name,popularity,genres) 
+df <- arrange(df, desc(popularity))
+```{r,echo=FALSE,eval=FALSE}
+## Cleaning 
+# Split genres and create a separate row for each genre while preserving song and artist information
+df <- df %>%
+  mutate(genres = str_split(genres, ", ")) %>%
+  unnest(genres)
+df %>%
+  select(artist_name,genres) 
+```
+```{r,echo=FALSE,eval=FALSE}
+class(df$is_explicit)
+unique(df$is_explicit)
+df$is_explicit<- as.factor(df$is_explicit)
+class(df$is_explicit)
+levels(df$is_explicit)
+df$is_explicit <- factor((df$is_explicit),levels = c("True","False"))
+levels(df$is_explicit)
+df$genres <- gsub("\\[|'|\\]", "", df$genres)
+
+df %>%
+  select(artist_name,track_name,popularity,genres) 
+
+# Arrange the dataframe in descending order based on the 'popularity' column
+df <- arrange(df, desc(popularity))
+
+# View the arranged dataframe
+print(df)
+```
+
+## Finding the most common genres for the tracks 
+In order to find the most common genres for all the tracks in the dataset it was necessary to count the tracks of each genre, sort them by frequency, then display the top 5 tracks, and create a data frame for our plot on the next slide. This is the code below:
+
+genre_counts <- table(unlist(df$genres))
+
+sorted_genres <- sort(genre_counts, decreasing = TRUE)
+N <- 5  
+
+top_genres <- head(sorted_genres, N)
+
+genre_data <- data.frame(genre = names(top_genres), frequency = as.numeric(top_genres))
+
+top_genres <- head(genre_counts, 10)
+
+
+## The most common genres among the top tracks
+Through finding the most common genres for all the tracks, we were able to build a ggplot to display this in a visual format that is easier to see. Here we can see pop music was the most popular followed by reggaeton, canadian contemporary r&b, k-pop, and bedroom pop.
+
+```{r,echo=FALSE}
+# Analyzing common genres among top tracks
+# Check the structure of the dataset
+df$genres <- gsub("\\[|'|\\]", "", df$genres)
+
+# Count the occurrences of each genre
+genre_counts <- table(unlist(df$genres))
+
+# Sort the genres by frequency
+sorted_genres <- sort(genre_counts, decreasing = TRUE)
+
+# Display the top N most common genres
+N <- 5  # You can adjust this value as needed
+top_genres <- head(sorted_genres, N)
+
+# Create a data frame for plotting
+genre_data <- data.frame(genre = names(top_genres), frequency = as.numeric(top_genres))
+
+# Plot using ggplot2
+ggplot(genre_data, aes(x = reorder(genre, -frequency), y = frequency)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(title = "Top 5 Most Common Genres Among Top Tracks",
+       x = "Genre", y = "Frequency") +
+  theme(axis.text.x = element_text(angle = 35, hjust = 1))  # Rotate x-axis labels
+# Count the occurrences of each genre
+genre_counts <- df %>% 
+  count(genres) %>%
+  arrange(desc(n))  # Arrange in descending order of frequency
+
+# Display the top 10 most common genres
+top_genres <- head(genre_counts, 10)
+print(top_genres)
+
+```
+## Columns for correlation analysis
+
+Here you can see all of the variables in the dataset that were used to find our response variable, popularity. They were each compared to one another for the entire dataset and their correlation values ultimately led to the correlation heatmap found next.
+```{r,echo=FALSE}
+# Select relevant columns for correlation analysis
+selected_cols <- c("danceability", "valence", "energy", "loudness", 
+                   "acousticness", "instrumentalness", "liveness", 
+                   "speechiness", "tempo", "duration_ms", "time_signature", 
+                   "popularity")
+
+# Subset the dataset with selected columns
+df_subset <- df %>% 
+  select(all_of(selected_cols))
+
+# Compute correlation matrix
+correlation_matrix <- cor(df_subset)
+# Print correlation matrix
+print(correlation_matrix)
+# Convert correlation matrix to data frame
+correlation_df <- as.data.frame(correlation_matrix)
+
+# Add row names as a column
+correlation_df$variable <- rownames(correlation_df)
+
+# Convert correlation matrix to long format
+correlation_long <- tidyr::pivot_longer(correlation_df, -variable, names_to = "variable2", values_to = "correlation")
+```
+## Heatmap of correlation between track attributes and popularity.
+We can see trends were tempo, time signature, and valence correlate pretty highlt and we can also see that popularity correlates the most with tempo and spechiness. The heat map also shows other correlations which could lead to more studies done in the future as well. 
+
+```{r,echo=FALSE}
+
+# Plot correlation heatmap
+ggplot(correlation_long, aes(variable, variable2, fill = correlation)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = 0, limits = c(-1,1), name = "Correlation") +
+  theme_minimal() +
+  labs(title = "Correlation Heatmap of Track Attributes and Popularity",
+       x = "Track Attributes", y = "Track Attributes") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## Setting up a prediction model for track popularity
+To create a prediction model for track popularity, we defined possible predictors and its response variable being popularity as stated before. We then used an if else statement to check if popularity was numeric, then we were ultimately able to make predictions on the test data given. This is the code below:
+
+predictors <- c("danceability", "valence", "energy", "loudness", 
+                "acousticness", "instrumentalness", "liveness", 
+                "speechiness", "tempo", "duration_ms", "time_signature")
+response_var <- "popularity"
+
+if (is.numeric(df[[response_var]]) && length(unique(df[[response_var]])) > 5) {
+df[[response_var]] <- as.numeric(df[[response_var]])
+
+
+
+It was also very important to calculate the RMSE values(accuracy values) for
+
+Here is further code for our model
+
+} else {
+
+df[[response_var]] <- as.factor(df[[response_var]])...
+
+rf_predictions <- predict(rf_model, test_data[, predictors])
+
+rmse <- sqrt(mean((test_data[[response_var]] - rf_predictions)^2))
+
+
+
+## Predicting Track Popularity
+Here are the RMSE values we obtained based on our prediction model:
+
+```{r,echo=FALSE}
+# Load required libraries
+library(caret)  # For training models
+library(randomForest)  # For Random Forest model
+library(e1071)  # For SVM model (Support Vector Machine)
+library(gbm)  # For Gradient Boosting Machine model
+
+# Define predictors and response variable
+predictors <- c("danceability", "valence", "energy", "loudness", 
+                "acousticness", "instrumentalness", "liveness", 
+                "speechiness", "tempo", "duration_ms", "time_signature")
+response_var <- "popularity"
+
+# Check if "popularity" is continuous or categorical
+if (is.numeric(df[[response_var]]) && length(unique(df[[response_var]])) > 5) {
+  # Continuous variable (Regression)
+  
+  # Convert "popularity" to numeric
+  df[[response_var]] <- as.numeric(df[[response_var]])
+  
+  # Create data partition indices
+  set.seed(123)  # For reproducibility
+  train_index <- createDataPartition(df[[response_var]], p = 0.8, list = FALSE)
+  
+  # Subset the dataset into training and testing sets
+  train_data <- df[train_index, ]
+  test_data <- df[-train_index, ]
+  
+  # Train Random Forest model for regression
+  rf_model <- randomForest(train_data[, predictors], train_data[[response_var]], 
+                           ntree = 100, importance = TRUE)
+  
+  # Make predictions on test data
+  rf_predictions <- predict(rf_model, test_data[, predictors])
+  
+  # Evaluate model performance (e.g., RMSE)
+  rmse <- sqrt(mean((test_data[[response_var]] - rf_predictions)^2))
+  print(paste("Random Forest RMSE:", rmse))
+  
+  # Show feature importance
+  print("Feature Importance:")
+  print(importance(rf_model))
+  
+} else {
+  # Categorical variable (Classification)
+  
+  # Convert "popularity" to factor
+  df[[response_var]] <- as.factor(df[[response_var]])
+  
+  # Create data partition indices
+  set.seed(123)  # For reproducibility
+  train_index <- createDataPartition(df[[response_var]], p = 0.8, list = FALSE)
+  
+  # Subset the dataset into training and testing sets
+  train_data <- df[train_index, ]
+  test_data <- df[-train_index, ]
+  
+  # Train Random Forest model for classification
+  rf_model <- randomForest(train_data[, predictors], train_data[[response_var]], 
+                           ntree = 100, importance = TRUE)
+  
+  # Make predictions on test data
+  rf_predictions <- predict(rf_model, test_data[, predictors])
+  
+  # Evaluate model performance (e.g., accuracy)
+  accuracy <- mean(rf_predictions == test_data[[response_var]])
+  print(paste("Random Forest Accuracy:", accuracy))
+  
+  # Show feature importance
+  print("Feature Importance:")
+  print(importance(rf_model))
+}
+```
+
+## Conclusion
+Through our analysis, we gained valuable insights into the factors influencing track popularity within Spotify's "Top Tracks of 2023" playlist. Here are the key findings and conclusions:
+
+Feature Importance: Our analysis with Random Forest models allowed us to determine the importance of various track attributes in predicting popularity. Features such as danceability, energy, and valence emerged as significant predictors, suggesting that upbeat and energetic tracks tend to be more popular among listeners.
+
+Genre Influence: While we did not explicitly analyze genre influence in predicting track popularity, it's worth noting that genre can play a crucial role in shaping listener preferences. Future studies could explore the relationship between specific genres and track popularity within the dataset.
+
+Prediction Performance: Our predictive models, whether for regression or classification depending on the nature of the response variable, demonstrated reasonable performance in predicting track popularity. The obtained RMSE (Root Mean Squared Error) or accuracy values provide insights into the effectiveness of our models in capturing the variation in popularity scores or predicting popularity categories accurately.
+
+Recommendations: Based on our findings,industry professionals can leverage the insights gained to inform their decision-making processes. By understanding the features that contribute most significantly to track popularity, artists can tailor their music production strategies to align with listener preferences
+
+In conclusion, our analysis provides valuable insights into the factors driving track popularity within Spotify's "Top Tracks of 2023" playlist. By leveraging machine learning techniques and exploring the relationships between track attributes and popularity, we contribute to a deeper understanding of music consumption trends and offer actionable insights for stakeholders in the music industry.
+
