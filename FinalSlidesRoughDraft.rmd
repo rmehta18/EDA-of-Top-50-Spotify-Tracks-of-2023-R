@@ -43,6 +43,21 @@ df<- read.csv("301Pspotify.csv", sep=",", header=TRUE)
 ```
 
 ## Cleaning up our data (G)
+We cleaned our data further by organizing our genre column in the dataset with the code below. We also were able to arrange our popularity column in descending order and select columns for analysis such as popularity, genres, track names, and artist names.
+
+class(df$is_explicit)
+
+unique(df$is_explicit)
+
+df is_explicit<- as.factor(df$is_explicit)
+
+class(df$is_explicit)
+
+levels(df$is_explicit)
+
+df %>%
+  select(artist_name,track_name,popularity,genres) 
+df <- arrange(df, desc(popularity))
 ```{r,echo=FALSE,eval=FALSE}
 ## Cleaning 
 # Split genres and create a separate row for each genre while preserving song and artist information
@@ -73,7 +88,18 @@ print(df)
 ```
 
 ## Finding the most common genres for the tracks 
+In order to find the most common genres for all the tracks in the dataset it was necessary to count the tracks of each genre, sort them by frequency, then display the top 5 tracks, and create a data frame for our plot on the next slide. This is the code below:
 
+genre_counts <- table(unlist(df$genres))
+
+sorted_genres <- sort(genre_counts, decreasing = TRUE)
+N <- 5  
+
+top_genres <- head(sorted_genres, N)
+
+genre_data <- data.frame(genre = names(top_genres), frequency = as.numeric(top_genres))
+
+top_genres <- head(genre_counts, 10)
 
 
 ## What are the most common genres among the top tracks?
@@ -150,7 +176,20 @@ ggplot(correlation_long, aes(variable, variable2, fill = correlation)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+## How we set up a prediction model for track popularity
 
+
+predictors <- c("danceability", "valence", "energy", "loudness", 
+                "acousticness", "instrumentalness", "liveness", 
+                "speechiness", "tempo", "duration_ms", "time_signature")
+response_var <- "popularity"
+
+if (is.numeric(df[[response_var]]) && length(unique(df[[response_var]])) > 5) {
+df[[response_var]] <- as.numeric(df[[response_var]])
+
+} else {
+df[[response_var]] <- as.factor(df[[response_var]])...
+rf_predictions <- predict(rf_model, test_data[, predictors])
 
 
 ## Predicting Track Popularity
@@ -159,7 +198,7 @@ Lastly, we'll attempt to predict track popularity based on its features.
 ```{r,echo=FALSE}
 # Load required libraries
 library(caret)  # For training models
-library(randomForest)  # For Random Forest model (you can use other models as well)
+library(randomForest)  # For Random Forest model
 library(e1071)  # For SVM model (Support Vector Machine)
 library(gbm)  # For Gradient Boosting Machine model
 
