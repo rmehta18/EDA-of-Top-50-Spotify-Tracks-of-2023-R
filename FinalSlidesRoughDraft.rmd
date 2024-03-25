@@ -22,64 +22,39 @@ library(gbm)
 ## Background and the Problem
 - The dataset we used has information regarding the top 50 tracks of 2023 on Spotify from kaggle.com
 - There are 12 variables measured regarding the tracks found in the dataset: danceability, valence, energy, loudness, acousticness, instrumentalness, liveness, speechiness, tempo, duration_ms, time_signature, popularity
-- The main question we would like to answer regarding this data is Can we predict what attributes caused these tracks to be the most popular of 2023? To answer this, we have separated it into 3 parts:
+- The main question we would like to answer regarding this data is can we predict what key factors would influence tracks to be popular in the future? To answer this, we have separated it into 3 parts:
      - What are the most common genres among the top tracks?
      - What is the correlation between track attributes and popularity?
      - Can we predict track popularity based on these features?
 
-## Our data
+## Loading in our data and cleaning it up
+So the following code was used to load in our data and to split genres and create a separate row for each genre while preserving song and artist information
 
-df<- read.csv("top_50_2023.csv", sep=",", header=TRUE)
+We also had to edit the csv file a bit by choosing the primary genre attached to each song as many had multiple genres attached to them
 
+df<- read.csv("301Pspotify.csv, sep=",", header=TRUE)
+
+df <- df %>%
+  mutate(genres = str_split(genres, ", ")) %>%
+  unnest(genres)
+  
+df %>%
+  select(artist_name,genres) 
 
 ```{r,echo=FALSE,}
-df<- read.csv("top_50_2023.csv", sep=",", header=TRUE)
+df<- read.csv("301Pspotify.csv", sep=",", header=TRUE)
 
 ```
 
 
 ```{r,echo=FALSE,eval=FALSE}
-##cleaning 
-###xxxxxxxxx
-#select Variables 
-
-df %>%
-  select(artist_name,track_name,popularity) 
-##xxxxxxxxxxxx
-##filter observations 
-
-df %>%
-  select(artist_name,track_name,popularity) 
-na.omit()
-#conclusion no missing data 
-class(df$genres)
-levels(df$genres)
-df$genres<-as.factor(df$genres)
-class(df$genres)
-levels(df$genres)
-
-###duck with the data 
-
-class(df$genres)
-levels(df$genres)
-df <- separate_rows(df, genres, sep = ", ")
-
-
-genre <- "rap"  # Specify the genre for which you want to list track names
-rap_songs <- df[df$genres == "", "track_name"]
-print(rap_songs)
-df %>%
-  select(artist_name,genres) 
-
+## Cleaning 
 # Split genres and create a separate row for each genre while preserving song and artist information
 df <- df %>%
   mutate(genres = str_split(genres, ", ")) %>%
   unnest(genres)
 df %>%
   select(artist_name,genres) 
-##################
-
-
 ```
 
 
@@ -132,7 +107,7 @@ ggplot(genre_data, aes(x = reorder(genre, -frequency), y = frequency)) +
   geom_bar(stat = "identity", fill = "skyblue") +
   labs(title = "Top 5 Most Common Genres Among Top Tracks",
        x = "Genre", y = "Frequency") +
-  theme(axis.text.x = element_text(angle = 0, hjust = 1))  # Rotate x-axis labels
+  theme(axis.text.x = element_text(angle = 35, hjust = 1))  # Rotate x-axis labels
 # Count the occurrences of each genre
 genre_counts <- df %>% 
   count(genres) %>%
