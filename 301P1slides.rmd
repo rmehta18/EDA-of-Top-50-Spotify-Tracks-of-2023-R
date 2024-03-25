@@ -1,6 +1,6 @@
 ---
 title: "Project 1: Exploratory Analysis of Spotify's Top 50 Tracks of 2023"
-author: "Gaurang and Rithik"
+author: "Gaurang Mohan and Rithik Mehta"
 date: "2024-03-15"
 output:
   ioslides_presentation
@@ -28,7 +28,7 @@ library(gbm)
 ## Loading in our data 
 The following code was used to load in our data and to split genres and create a separate row for each genre while preserving song and artist information
 
-df<- read.csv("301Pspotify.csv, sep=",", header=TRUE)
+df<- read.csv("top_50_2023.csv, sep=",", header=TRUE)
 
 df <- df %>%
   mutate(genres = str_split(genres, ", ")) %>%
@@ -38,7 +38,7 @@ df %>%
   select(artist_name,genres) 
 
 ```{r,echo=FALSE,}
-df<- read.csv("301Pspotify.csv", sep=",", header=TRUE)
+df<- read.csv("top_50_2023.csv", sep=",", header=TRUE)
 
 ```
 
@@ -188,47 +188,14 @@ if (is.numeric(df[[response_var]]) && length(unique(df[[response_var]])) > 5) {
 df[[response_var]] <- as.numeric(df[[response_var]])
 
 ## How we set up a prediction model for track popularity cont.
-It was also very important to calculate the RMSE values(accuracy values) for
+We calculated RMSE for our prediction model and to do so we converted the response variable, trained a random forest model, and made predictions to ultimately calculate the RMSE.
 
-Here is further code for our model
-
-(## Explanation
-
-In this section of the code:
-
--**Convert Response Variable**: If the response variable "popularity" is categorical (e.g., low, medium, high), we need to convert it into a factor using `as.factor()`. This step ensures that the response variable is treated as a categorical variable during classification modeling.
-
----
-- **Train Random Forest Model**: We train a Random Forest model using the `randomForest()` function. This model is trained for classification since the response variable is categorical after conversion.
-----
-- **Make Predictions**: We use the trained Random Forest model to make predictions on the test dataset (`test_data`). The `predict()` function is used to generate predicted popularity categories based on the features (predictors) of the test data.
-----
-- **Calculate RMSE (Root Mean Squared Error)**: After making predictions, we calculate the RMSE to evaluate the performance of our classification model. RMSE measures the average deviation of predicted popularity categories from the actual categories in the test dataset. It quantifies the model's accuracy in predicting the response variable.
-----
-## The formula to calculate RMSE is:
+The formula to calculate RMSE(Root Mean Squared Error) is:
 
   $$ RMSE = \sqrt{\frac{\sum_{i=1}^{n} (y_i - \hat{y}_i)^2}{n}} $$
 
-  Where:
-  - \( y_i \) is the actual value of the response variable.
-  - \( \hat{y}_i \) is the predicted value of the response variable.
-  - \( n \) is the number of observations in the dataset.
-
-  Overall, RMSE provides a single measure of the accuracy of our classification model, indicating how well the model's predictions align with the actual popularity categories in the test dataset. Lower RMSE values indicate better predictive performance, with values closer to zero indicating more accurate predictions.
-)
-
-} else {
-
-df[[response_var]] <- as.factor(df[[response_var]])...
-
-rf_predictions <- predict(rf_model, test_data[, predictors])
-
-rmse <- sqrt(mean((test_data[[response_var]] - rf_predictions)^2))
-
-
-
 ## Predicting Track Popularity
-Here are the RMSE values we obtained based on our prediction model
+Here are the RMSE values we obtained based on our prediction model:
 
 ```{r,echo=FALSE}
 # Load required libraries
@@ -315,4 +282,3 @@ Genre Influence: While we did not explicitly analyze genre influence in predicti
 Prediction Performance: Our predictive models, whether for regression or classification depending on the nature of the response variable, demonstrated reasonable performance in predicting track popularity. The obtained RMSE (Root Mean Squared Error) or accuracy values provide insights into the effectiveness of our models in capturing the variation in popularity scores or predicting popularity categories accurately.
 
 Recommendations: Based on our findings,industry professionals can leverage the insights gained to inform their decision-making processes. By understanding the features that contribute most significantly to track popularity, artists can tailor their music production strategies to align with listener preferences
-
