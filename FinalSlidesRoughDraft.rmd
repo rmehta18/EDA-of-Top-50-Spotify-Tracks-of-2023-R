@@ -1,5 +1,5 @@
 ---
-title: "Project 1: Spotify Popularity Analysis"
+title: "Project 1: Exploratory Analysis of Spotify's Top 50 Tracks of 2023"
 author: "Gaurang and Rithik"
 date: "2024-03-15"
 output:
@@ -19,7 +19,7 @@ library(gbm)
 
 ## Background and the Problem
 - The dataset we used has information regarding the top 50 tracks of 2023 on Spotify from kaggle.com
-- There are 12 variables measured regarding the tracks found in the dataset: danceability, valence, energy, loudness, acousticness, instrumentalness, liveness, speechiness, tempo, duration_ms, time_signature, popularity
+- There are 12 input variables measured regarding the tracks found in the dataset: danceability, valence, energy, loudness, acousticness, instrumentalness, liveness, speechiness, tempo, duration_ms, time_signature, popularity, the response variable would be popularity.
 - The main question we would like to answer regarding this data is can we predict what key factors would influence tracks to be popular in the future? To answer this, we have separated it into 3 parts:
      - What are the most common genres among the top tracks?
      - What is the correlation between track attributes and popularity?
@@ -177,7 +177,7 @@ ggplot(correlation_long, aes(variable, variable2, fill = correlation)) +
 ```
 
 ## How we set up a prediction model for track popularity
-
+To create a prediction model for track popularity, we defined possible predictors and its response variable being popularity as stated before. We then used an if else statement to check if popularity was numeric, then we were ultimately able to make predictions on the test data given. This is the code below:
 
 predictors <- c("danceability", "valence", "energy", "loudness", 
                 "acousticness", "instrumentalness", "liveness", 
@@ -187,13 +187,23 @@ response_var <- "popularity"
 if (is.numeric(df[[response_var]]) && length(unique(df[[response_var]])) > 5) {
 df[[response_var]] <- as.numeric(df[[response_var]])
 
+## How we set up a prediction model for track popularity cont.
+It was also very important to calculate the RMSE values(accuracy values) for
+
+Here is further code for our model
+
 } else {
+
 df[[response_var]] <- as.factor(df[[response_var]])...
+
 rf_predictions <- predict(rf_model, test_data[, predictors])
+
+rmse <- sqrt(mean((test_data[[response_var]] - rf_predictions)^2))
+
 
 
 ## Predicting Track Popularity
-Lastly, we'll attempt to predict track popularity based on its features.
+Here are the RMSE values we obtained based on our prediction model
 
 ```{r,echo=FALSE}
 # Load required libraries
@@ -280,3 +290,4 @@ Genre Influence: While we did not explicitly analyze genre influence in predicti
 Prediction Performance: Our predictive models, whether for regression or classification depending on the nature of the response variable, demonstrated reasonable performance in predicting track popularity. The obtained RMSE (Root Mean Squared Error) or accuracy values provide insights into the effectiveness of our models in capturing the variation in popularity scores or predicting popularity categories accurately.
 
 Recommendations: Based on our findings,industry professionals can leverage the insights gained to inform their decision-making processes. By understanding the features that contribute most significantly to track popularity, artists can tailor their music production strategies to align with listener preferences
+
