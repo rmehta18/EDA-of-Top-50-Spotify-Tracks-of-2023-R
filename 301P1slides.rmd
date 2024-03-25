@@ -192,6 +192,31 @@ It was also very important to calculate the RMSE values(accuracy values) for
 
 Here is further code for our model
 
+(## Explanation
+
+In this section of the code:
+
+-**Convert Response Variable**: If the response variable "popularity" is categorical (e.g., low, medium, high), we need to convert it into a factor using `as.factor()`. This step ensures that the response variable is treated as a categorical variable during classification modeling.
+
+---
+- **Train Random Forest Model**: We train a Random Forest model using the `randomForest()` function. This model is trained for classification since the response variable is categorical after conversion.
+----
+- **Make Predictions**: We use the trained Random Forest model to make predictions on the test dataset (`test_data`). The `predict()` function is used to generate predicted popularity categories based on the features (predictors) of the test data.
+----
+- **Calculate RMSE (Root Mean Squared Error)**: After making predictions, we calculate the RMSE to evaluate the performance of our classification model. RMSE measures the average deviation of predicted popularity categories from the actual categories in the test dataset. It quantifies the model's accuracy in predicting the response variable.
+----
+## The formula to calculate RMSE is:
+
+  $$ RMSE = \sqrt{\frac{\sum_{i=1}^{n} (y_i - \hat{y}_i)^2}{n}} $$
+
+  Where:
+  - \( y_i \) is the actual value of the response variable.
+  - \( \hat{y}_i \) is the predicted value of the response variable.
+  - \( n \) is the number of observations in the dataset.
+
+  Overall, RMSE provides a single measure of the accuracy of our classification model, indicating how well the model's predictions align with the actual popularity categories in the test dataset. Lower RMSE values indicate better predictive performance, with values closer to zero indicating more accurate predictions.
+)
+
 } else {
 
 df[[response_var]] <- as.factor(df[[response_var]])...
