@@ -1,6 +1,6 @@
 ---
 title: "Project 1: Spotify Popularity Analysis"
-author: "Guarang and Rithik"
+author: "Gaurang and Rithik"
 date: "2024-03-15"
 output:
   ioslides_presentation
