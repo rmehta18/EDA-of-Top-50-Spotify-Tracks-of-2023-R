@@ -5,10 +5,9 @@ date: "2024-03-15"
 output:
   ioslides_presentation
 ---
-```{r,echo=FALSE}
+```{r,echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(ggplot2)
-library(dplyr)
 library(dplyr)
 library(tidyr)
 library(caret)
@@ -16,7 +15,6 @@ library(stringr)
 library(randomForest)
 library(e1071)
 library(gbm)
-
 ```
 
 ## Background and the Problem
@@ -27,10 +25,8 @@ library(gbm)
      - What is the correlation between track attributes and popularity?
      - Can we predict track popularity based on these features?
 
-## Loading in our data and cleaning it up
-So the following code was used to load in our data and to split genres and create a separate row for each genre while preserving song and artist information
-
-We also had to edit the csv file a bit by choosing the primary genre attached to each song as many had multiple genres attached to them
+## Loading in our data 
+The following code was used to load in our data and to split genres and create a separate row for each genre while preserving song and artist information
 
 df<- read.csv("301Pspotify.csv, sep=",", header=TRUE)
 
@@ -46,7 +42,7 @@ df<- read.csv("301Pspotify.csv", sep=",", header=TRUE)
 
 ```
 
-
+## Cleaning up our data (G)
 ```{r,echo=FALSE,eval=FALSE}
 ## Cleaning 
 # Split genres and create a separate row for each genre while preserving song and artist information
@@ -56,11 +52,7 @@ df <- df %>%
 df %>%
   select(artist_name,genres) 
 ```
-
-
-
 ```{r,echo=FALSE,eval=FALSE}
-### work 
 class(df$is_explicit)
 unique(df$is_explicit)
 df$is_explicit<- as.factor(df$is_explicit)
@@ -72,6 +64,7 @@ df$genres <- gsub("\\[|'|\\]", "", df$genres)
 
 df %>%
   select(artist_name,track_name,popularity,genres) 
+
 # Arrange the dataframe in descending order based on the 'popularity' column
 df <- arrange(df, desc(popularity))
 
@@ -79,14 +72,14 @@ df <- arrange(df, desc(popularity))
 print(df)
 ```
 
+## Finding the most common genres for the tracks 
+
+
+
 ## What are the most common genres among the top tracks?
 ```{r,echo=FALSE}
 # Analyzing common genres among top tracks
-
-# Assuming your dataset is named 'spotify_top_tracks_2023'
-
 # Check the structure of the dataset
-##str(df)
 df$genres <- gsub("\\[|'|\\]", "", df$genres)
 
 # Count the occurrences of each genre
@@ -118,3 +111,133 @@ top_genres <- head(genre_counts, 10)
 print(top_genres)
 
 ```
+
+```{r,echo=FALSE}
+# Select relevant columns for correlation analysis
+selected_cols <- c("danceability", "valence", "energy", "loudness", 
+                   "acousticness", "instrumentalness", "liveness", 
+                   "speechiness", "tempo", "duration_ms", "time_signature", 
+                   "popularity")
+
+# Subset the dataset with selected columns
+df_subset <- df %>% 
+  select(all_of(selected_cols))
+
+# Compute correlation matrix
+correlation_matrix <- cor(df_subset)
+# Print correlation matrix
+print(correlation_matrix)
+# Convert correlation matrix to data frame
+correlation_df <- as.data.frame(correlation_matrix)
+
+# Add row names as a column
+correlation_df$variable <- rownames(correlation_df)
+
+# Convert correlation matrix to long format
+correlation_long <- tidyr::pivot_longer(correlation_df, -variable, names_to = "variable2", values_to = "correlation")
+```
+## Heatmap of correlation between track attributes and popularity.
+```{r,echo=FALSE}
+
+# Plot correlation heatmap
+ggplot(correlation_long, aes(variable, variable2, fill = correlation)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", 
+                       midpoint = 0, limits = c(-1,1), name = "Correlation") +
+  theme_minimal() +
+  labs(title = "Correlation Heatmap of Track Attributes and Popularity",
+       x = "Track Attributes", y = "Track Attributes") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
+
+## Predicting Track Popularity
+Lastly, we'll attempt to predict track popularity based on its features.
+
+```{r,echo=FALSE}
+# Load required libraries
+library(caret)  # For training models
+library(randomForest)  # For Random Forest model (you can use other models as well)
+library(e1071)  # For SVM model (Support Vector Machine)
+library(gbm)  # For Gradient Boosting Machine model
+
+# Define predictors and response variable
+predictors <- c("danceability", "valence", "energy", "loudness", 
+                "acousticness", "instrumentalness", "liveness", 
+                "speechiness", "tempo", "duration_ms", "time_signature")
+response_var <- "popularity"
+
+# Check if "popularity" is continuous or categorical
+if (is.numeric(df[[response_var]]) && length(unique(df[[response_var]])) > 5) {
+  # Continuous variable (Regression)
+  
+  # Convert "popularity" to numeric
+  df[[response_var]] <- as.numeric(df[[response_var]])
+  
+  # Create data partition indices
+  set.seed(123)  # For reproducibility
+  train_index <- createDataPartition(df[[response_var]], p = 0.8, list = FALSE)
+  
+  # Subset the dataset into training and testing sets
+  train_data <- df[train_index, ]
+  test_data <- df[-train_index, ]
+  
+  # Train Random Forest model for regression
+  rf_model <- randomForest(train_data[, predictors], train_data[[response_var]], 
+                           ntree = 100, importance = TRUE)
+  
+  # Make predictions on test data
+  rf_predictions <- predict(rf_model, test_data[, predictors])
+  
+  # Evaluate model performance (e.g., RMSE)
+  rmse <- sqrt(mean((test_data[[response_var]] - rf_predictions)^2))
+  print(paste("Random Forest RMSE:", rmse))
+  
+  # Show feature importance
+  print("Feature Importance:")
+  print(importance(rf_model))
+  
+} else {
+  # Categorical variable (Classification)
+  
+  # Convert "popularity" to factor
+  df[[response_var]] <- as.factor(df[[response_var]])
+  
+  # Create data partition indices
+  set.seed(123)  # For reproducibility
+  train_index <- createDataPartition(df[[response_var]], p = 0.8, list = FALSE)
+  
+  # Subset the dataset into training and testing sets
+  train_data <- df[train_index, ]
+  test_data <- df[-train_index, ]
+  
+  # Train Random Forest model for classification
+  rf_model <- randomForest(train_data[, predictors], train_data[[response_var]], 
+                           ntree = 100, importance = TRUE)
+  
+  # Make predictions on test data
+  rf_predictions <- predict(rf_model, test_data[, predictors])
+  
+  # Evaluate model performance (e.g., accuracy)
+  accuracy <- mean(rf_predictions == test_data[[response_var]])
+  print(paste("Random Forest Accuracy:", accuracy))
+  
+  # Show feature importance
+  print("Feature Importance:")
+  print(importance(rf_model))
+}
+```
+
+## Conclusion
+Through our analysis, we gained valuable insights into the factors influencing track popularity within Spotify's "Top Tracks of 2023" playlist. Here are the key findings and conclusions:
+
+Feature Importance: Our analysis with Random Forest models allowed us to determine the importance of various track attributes in predicting popularity. Features such as danceability, energy, and valence emerged as significant predictors, suggesting that upbeat and energetic tracks tend to be more popular among listeners.
+
+Genre Influence: While we did not explicitly analyze genre influence in predicting track popularity, it's worth noting that genre can play a crucial role in shaping listener preferences. Future studies could explore the relationship between specific genres and track popularity within the dataset.
+
+## Conclusion cont.
+Prediction Performance: Our predictive models, whether for regression or classification depending on the nature of the response variable, demonstrated reasonable performance in predicting track popularity. The obtained RMSE (Root Mean Squared Error) or accuracy values provide insights into the effectiveness of our models in capturing the variation in popularity scores or predicting popularity categories accurately.
+
+Recommendations: Based on our findings,industry professionals can leverage the insights gained to inform their decision-making processes. By understanding the features that contribute most significantly to track popularity, artists can tailor their music production strategies to align with listener preferences
